@@ -4,6 +4,7 @@
     "private": true,
     "type": "module",
     "scripts": {
+        "prepare": "effect-language-service patch",
         "dev": "tsx watch src/index.ts",
         "build": "tsc --noEmit",
         "start": "node --import tsx src/index.ts",
@@ -17,13 +18,13 @@
     },
     "dependencies": {
         "@effect/platform": "^0.96.1",
-        "@effect/schema": "^0.75.5",
         "@hono/node-server": "^1.14.0",
         "effect": "^3.21.2",
         "hono": "^4.7.0"
     },
     "devDependencies": {
         "@biomejs/biome": "catalog:",
+        "@effect/language-service": "^0.86.2",
         "@types/node": "^24.6.2",
         "npm-check-updates": "catalog:",
         "tsx": "^4.19.0",

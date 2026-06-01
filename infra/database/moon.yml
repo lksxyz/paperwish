@@ -1,0 +1,23 @@
+$schema: https://moonrepo.dev/schemas/project.json
+tasks:
+  start:
+    command: docker stack deploy -c postgresql.yml $STACK_NAME
+    options:
+      mergeEnv: replace
+      runFromWorkspaceRoot: false
+      interactive: false
+      outputStyle: buffer-only-failure
+      runInCI: false
+      cache: false
+      shell: true
+language: unknown
+stack: infrastructure
+tags:
+- config
+id: 'database'
+project:
+  description: 'Database using Postgresql'
+  title: 'database'
+env:
+  STACK_NAME: $(jq -r .name <$workspaceRoot'/package.json')
+layer: configuration
