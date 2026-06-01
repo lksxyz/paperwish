@@ -28,8 +28,8 @@ function Home() {
         <Button variant="destructive">Destructive Button</Button>
 
         <Dialog>
-          <DialogTrigger>
-            <Button>Open Contact Form</Button>
+          <DialogTrigger asChild>
+            <button>Open Contact Form</button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
