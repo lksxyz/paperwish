@@ -39,3 +39,13 @@ tasks:
       runInCI: false
       cache: false
       shell: true
+
+  format:
+    command: 'biome format --write'
+    toolchain: node
+
+  lint:
+    command: 'biome check'
+    toolchain: node
+    options:
+      cache: true
