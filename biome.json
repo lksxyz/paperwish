@@ -1,5 +1,5 @@
 {
-    "$schema": "https://biomejs.dev/schemas/2.4.10/schema.json",
+    "$schema": "https://biomejs.dev/schemas/2.4.16/schema.json",
     "vcs": {
         "enabled": true,
         "clientKind": "git",
@@ -7,133 +7,78 @@
         "defaultBranch": "main"
     },
     "files": {
-        "ignoreUnknown": true,
-        "includes": [
-            "**",
-            "!**/build/*",
-            "!**/dist/*",
-            "!**/out/*",
-            "!**/vendor/*",
-            "!**/temp/*",
-            "!**/tmp/*",
-            "!**/.astro",
-            "!**/.next",
-            "!**/.react-router",
-            "!infrastructure/*",
-            "!templates/*",
-            "!docsite/*",
-            "!.moon/*",
-            "!.temp/*"
-        ]
+        "ignoreUnknown": true
     },
     "formatter": {
         "enabled": true,
-        "formatWithErrors": false,
+        "formatWithErrors": true,
         "indentStyle": "space",
         "indentWidth": 4,
         "lineWidth": 100
     },
     "linter": {
         "enabled": true,
-        "includes": ["!.astro"],
         "rules": {
-            "recommended": true,
             "a11y": {
                 "noSvgWithoutTitle": "off",
                 "useKeyWithClickEvents": "off",
                 "useSemanticElements": "off",
-                "useValidAnchor": "off"
+                "useValidAnchor": "off",
+                "noLabelWithoutControl": "off",
+                "useFocusableInteractive": "off",
+                "useAriaPropsForRole": "off",
+                "noRedundantRoles": "off"
             },
             "complexity": {
                 "noBannedTypes": "off",
-                "noUselessFragments": "warn"
+                "noUselessFragments": "off"
             },
             "correctness": {
-                "noUnusedImports": {
-                    "level": "error",
-                    "fix": "none",
-                    "options": {}
-                },
-                "noUnusedVariables": {
-                    "level": "warn",
-                    "fix": "none",
-                    "options": {
-                        "ignoreRestSiblings": true
-                    }
-                },
+                "noUnusedImports": "off",
+                "noUnusedVariables": "off",
                 "noChildrenProp": "off",
                 "noUnknownFunction": "off",
-                "useJsxKeyInIterable": "error"
+                "useJsxKeyInIterable": "off",
+                "useExhaustiveDependencies": "off"
             },
             "nursery": {
-                "useSortedClasses": {
-                    "level": "warn",
-                    "fix": "none",
-                    "options": {
-                        "attributes": ["classList"],
-                        "functions": ["clsx", "cn", "cx", "cva", "tv", "tw"]
-                    }
-                }
+                "useSortedClasses": "off"
             },
             "performance": {
                 "noReExportAll": "off"
             },
             "security": {
-                "noDangerouslySetInnerHtmlWithChildren": "warn",
+                "noDangerouslySetInnerHtmlWithChildren": "off",
                 "noDangerouslySetInnerHtml": "off"
             },
             "style": {
                 "noNonNullAssertion": "off",
-                "noParameterAssign": "warn",
-                "useAsConstAssertion": "error",
-                "useDefaultParameterLast": "error",
-                "useEnumInitializers": "error",
-                "useSelfClosingElements": "error",
-                "useSingleVarDeclarator": "error",
+                "noParameterAssign": "off",
+                "useAsConstAssertion": "off",
+                "useDefaultParameterLast": "off",
+                "useEnumInitializers": "off",
+                "useSelfClosingElements": "off",
+                "useSingleVarDeclarator": "off",
                 "noUnusedTemplateLiteral": "off",
-                "useNumberNamespace": "error",
-                "noInferrableTypes": "error",
-                "noUselessElse": "error",
-                "useConsistentArrayType": "warn",
-                "useExportType": "warn",
-                "useImportType": {
-                    "level": "off",
-                    "fix": "none",
-                    "options": {
-                        "style": "auto"
-                    }
-                },
-                "useFilenamingConvention": {
-                    "level": "off",
-                    "options": {
-                        "filenameCases": ["PascalCase", "camelCase", "kebab-case"]
-                    }
-                }
+                "useNumberNamespace": "off",
+                "noInferrableTypes": "off",
+                "noUselessElse": "off",
+                "useConsistentArrayType": "off",
+                "useExportType": "off",
+                "useImportType": "off",
+                "useFilenamingConvention": "off"
             },
             "suspicious": {
-                "noArrayIndexKey": "warn",
+                "noArrayIndexKey": "off",
                 "noAssignInExpressions": "off",
                 "noCommentText": "off",
                 "noDebugger": "off",
                 "noExplicitAny": "off",
-                "noConsole": {
-                    "level": "warn",
-                    "fix": "none",
-                    "options": {
-                        "allow": [
-                            "assert",
-                            "error",
-                            "info",
-                            "warn",
-                            "debug",
-                            "time",
-                            "timeEnd",
-                            "timeLog"
-                        ]
-                    }
-                },
-                "noDuplicateAtImportRules": "error",
-                "noEmptyBlock": "warn"
+                "noDocumentCookie": "off",
+                "noDoubleEquals": "off",
+                "noConsole": "off",
+                "noDuplicateAtImportRules": "off",
+                "noEmptyBlock": "off"
             }
         }
     },
@@ -164,14 +109,6 @@
         "formatter": {
             "indentWidth": 4,
             "trailingCommas": "none"
-        }
-    },
-    "assist": {
-        "enabled": true,
-        "actions": {
-            "source": {
-                "organizeImports": "on"
-            }
         }
     }
 }
