@@ -29,7 +29,9 @@ function Home() {
 
         <Dialog>
           <DialogTrigger asChild>
-            <button>Open Contact Form</button>
+            <span className="inline-flex cursor-pointer items-center justify-center rounded-lg border border-transparent bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/80">
+              Open Contact Form
+            </span>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
