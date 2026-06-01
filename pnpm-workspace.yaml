@@ -8,7 +8,7 @@ allowBuilds:
   msgpackr-extract: true
 
 catalog:
-  '@biomejs/biome': ~2.4.10
+  '@biomejs/biome': ~2.4.16
   npm-check-updates: ^20.0.0
   typescript: ~6.0.2
 

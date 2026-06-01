@@ -10,11 +10,10 @@
 
 | ID | Path | Stack |
 |---|---|---|
-| `platform` | `apps/platform/` | React Router v7 SPA, Tailwind CSS v4, Vite |
+| `platform` | `apps/platform/` | TanStack Router, React 19, Tailwind CSS v4, Vite |
+| `api` | `apps/api/` | Effect framework |
 
-- `ssr: false` in `react-router.config.ts` — purely client-side.
 - `packages/` directory exists but is **empty** (no packages yet). `shared-ui` is referenced in configs but does not exist.
-- `#/` path alias maps to `app/*`.
 
 ## Commands
 
@@ -26,14 +25,6 @@ Use `pnpm` directly or `moon` for cache-aware task orchestration.
 | Build | `moon platform:build` or `pnpm --filter platform build` |
 | Typecheck | `moon platform:typecheck` or `pnpm --filter platform typecheck` |
 | Lint | `moon :lint` (all projects) or `pnpm run lint` (root biome lint) |
-| Check | `moon :check` (all projects) or `pnpm run check` (biome check) |
-| Format | `pnpm run format` (biome format) |
-| Unit tests | `moon platform:test` or `pnpm --filter platform test` |
-| E2E tests | `pnpm --filter platform e2e` |
-| Docker services | `pnpm run compose:up` / `compose:down` / `compose:cleanup` |
-| Update deps | `pnpm run update-deps` (interactive via npm-check-updates) |
-
-`moon platform:dev` and `platform:build` depend on `prebuild` which requires `shared-ui:build`. Since shared-ui does not exist, these tasks will fail — run `pnpm --filter platform dev` instead.
 
 ## Toolchain & Style
 
@@ -61,6 +52,98 @@ Use `pnpm` directly or `moon` for cache-aware task orchestration.
 
 - GitLab, default branch `main`.
 - Pre-commit hook (defined in `.moon/workspace.yml`): `moon run :format --affected --status=all` then `moon run :lint --affected --status=staged`.
+
+## Commit Guidelines
+
+### Micro / Atomic Commits
+
+When committing, always use **micro/atomic commits**:
+
+- **One commit = one logical change** — each commit does exactly one thing
+- **Self-contained** — the code works and passes tests at every commit
+- **Never bundle unrelated changes** — split into separate commits if needed
+- Stage and commit changes incrementally as you complete each logical unit of work
+
+### Conventional Commits
+
+When the user asks to commit, use the [Conventional Commits](https://www.conventionalcommits.org/) format.
+
+#### Format
+
+```
+type(scope): description
+
+[optional body]
+
+[optional footer]
+```
+
+#### Allowed Types
+
+`feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`
+
+#### Rules
+
+- **Type**: Must be one of the allowed types
+- **Scope**: Optional but recommended for clarity
+- **Description**: Required; use imperative mood (e.g., "add" not "added")
+- **Body**: Optional; use for additional context
+- **Footer**: For breaking changes (`BREAKING CHANGE: ...`) or issue references
+
+#### Examples
+
+- `feat(parser): add ability to parse arrays`
+- `fix(ui): correct button alignment`
+- `docs: update README with usage instructions`
+- `refactor: improve performance of data processing`
+- `chore: update dependencies`
+- `feat!: send email on registration` (breaking change)
+
+## Commit Guidelines
+
+### Micro / Atomic Commits
+
+When committing, always use **micro/atomic commits**:
+
+- **One commit = one logical change** — each commit does exactly one thing
+- **Self-contained** — the code works and passes tests at every commit
+- **Never bundle unrelated changes** — split into separate commits if needed
+- Stage and commit changes incrementally as you complete each logical unit of work
+
+### Conventional Commits
+
+When the user asks to commit, use the [Conventional Commits](https://www.conventionalcommits.org/) format.
+
+#### Format
+
+```
+type(scope): description
+
+[optional body]
+
+[optional footer]
+```
+
+#### Allowed Types
+
+`feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`
+
+#### Rules
+
+- **Type**: Must be one of the allowed types
+- **Scope**: Optional but recommended for clarity
+- **Description**: Required; use imperative mood (e.g., "add" not "added")
+- **Body**: Optional; use for additional context
+- **Footer**: For breaking changes (`BREAKING CHANGE: ...`) or issue references
+
+#### Examples
+
+- `feat(parser): add ability to parse arrays`
+- `fix(ui): correct button alignment`
+- `docs: update README with usage instructions`
+- `refactor: improve performance of data processing`
+- `chore: update dependencies`
+- `feat!: send email on registration` (breaking change)
 
 ## Effect Best Practices
 
