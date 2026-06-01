@@ -1,37 +1,19 @@
-import { resolve } from "node:path";
-import { reactRouter } from "@react-router/dev/vite";
-import tailwindcss from "@tailwindcss/vite";
-import { env, isProduction } from "std-env";
-import { defineConfig } from "vite";
-import devtoolsJson from "vite-plugin-devtools-json";
-import tsconfigPaths from "vite-tsconfig-paths";
+import tailwindcss from '@tailwindcss/vite'
+import { devtools } from '@tanstack/devtools-vite'
 
-// Check if the current environment is CI or test environment
-const isTestOrStorybook = env.VITEST || process.argv[1]?.includes("storybook");
+import { tanstackRouter } from '@tanstack/router-plugin/vite'
 
-export default defineConfig({
-	envPrefix: "VITE_" /* Prefix for environment variables */,
-	plugins: [
-		tailwindcss(),
-		!isTestOrStorybook && reactRouter(),
-		tsconfigPaths(),
-		devtoolsJson(),
-	],
-	server: { port: 3001, host: false },
-	publicDir: resolve("public"),
-	optimizeDeps: {
-		// Do not optimize internal workspace dependencies.
-		exclude: ["@repo/shared-ui"],
-	},
-	build: {
-		ssr: false,
-		minify: isProduction,
-		cssMinify: isProduction,
-		chunkSizeWarningLimit: 1024 * 2,
-		reportCompressedSize: false,
-		emptyOutDir: true,
-		manifest: true,
-		terserOptions: { format: { comments: false } },
-	},
-	esbuild: { legalComments: "none" },
-});
+import viteReact from '@vitejs/plugin-react'
+import { defineConfig } from 'vite'
+
+const config = defineConfig({
+  resolve: { tsconfigPaths: true },
+  plugins: [
+    devtools(),
+    tailwindcss(),
+    tanstackRouter({ target: 'react', autoCodeSplitting: true }),
+    viteReact(),
+  ],
+})
+
+export default config
