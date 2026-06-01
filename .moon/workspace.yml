@@ -38,7 +38,6 @@ docker:
 projects:
   globs:
     - 'apps/*'
-    - 'infra/*'
     - 'packages/*'
 
 # Monorepo package templates to use when generating new projects.
