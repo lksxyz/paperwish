@@ -1,0 +1,38 @@
+{
+    "name": "paperwish",
+    "version": "0.0.0",
+    "private": true,
+    "scripts": {
+        "prepare": "moon setup",
+
+        "dev": "moon :dev",
+        "build": "moon :build",
+        "check": "moon :check",
+        "lint": "moon :lint",
+        "typecheck": "moon :typecheck",
+        "test": "moon :test",
+        "clean": "moon :clean",
+
+        "format": "biome format . --write",
+        "compose:up": "docker compose -f compose.yaml up -d --remove-orphans",
+        "compose:down": "docker compose -f compose.yaml down --remove-orphans && docker compose -f compose.yaml --profile instrumented down --remove-orphans",
+        "compose:cleanup": "docker compose -f compose.yaml down --remove-orphans --volumes",
+        "compose:instrumented": "docker compose -f compose.yaml --profile instrumented up -d --remove-orphans",
+        "update-deps": "npm-check-updates --configFileName .ncurc.json",
+        "cleanup": "moon run :clean"
+    },
+    "devDependencies": {
+        "@biomejs/biome": "catalog:",
+        "npm-check-updates": "catalog:"
+    },
+    "pnpm": {
+        "onlyBuiltDependencies": [
+            "@biomejs/biome",
+            "@swc/core",
+            "core-js-pure",
+            "esbuild",
+            "sharp"
+        ]
+    },
+    "packageManager": "pnpm@11.5.0"
+}
