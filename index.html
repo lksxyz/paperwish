@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Pistol Hand Sign Detection</title>
+    <link rel="stylesheet" href="./src/style.css" />
+  </head>
+  <body>
+    <main class="app">
+      <header class="app__header">
+        <h1>Pistol Hand Sign</h1>
+        <p class="app__subtitle">
+          Form a two-finger pistol with your right hand. We'll <strong>cock</strong>
+          when you fold the ring and pinky, and <strong>fire</strong> when you
+          lift the index tip.
+        </p>
+      </header>
+
+      <section class="stage" aria-label="Detection stage">
+        <div class="stage__viewport">
+          <video
+            id="webcam"
+            class="stage__video"
+            autoplay
+            playsinline
+            muted
+            hidden
+          ></video>
+          <canvas id="overlay" class="stage__overlay"></canvas>
+          <div id="placeholder" class="stage__placeholder">
+            <span class="stage__placeholder-icon" aria-hidden="true">⊙</span>
+            <p>Webcam preview will appear here.</p>
+          </div>
+        </div>
+
+        <div class="stage__hud">
+          <span id="status" class="hud__pill hud__pill--idle">Idle</span>
+          <span id="latency" class="hud__pill">—</span>
+        </div>
+      </section>
+
+      <section class="controls" aria-label="Controls">
+        <div class="controls__row">
+          <button id="startWebcam" class="btn btn--primary" type="button">
+            Start webcam
+          </button>
+          <button id="stopWebcam" class="btn" type="button" disabled>
+            Stop
+          </button>
+        </div>
+        <div class="controls__row">
+          <label class="toggle">
+            <input id="soundToggle" type="checkbox" checked />
+            <span>Sound</span>
+          </label>
+        </div>
+      </section>
+
+      <section class="gesture" aria-label="Hand gesture">
+        <header class="gesture__header">
+          <span id="stateBadge" class="state-badge state-badge--idle">IDLE</span>
+          <span class="gesture__score">
+            Score <strong id="gestureScore">0.00</strong>
+          </span>
+        </header>
+
+        <ul class="fingers" aria-label="Finger states">
+          <li class="finger" id="fingerThumb">
+            <span class="finger__icon">⊙</span>
+            <span class="finger__name">Thumb</span>
+          </li>
+          <li class="finger" id="fingerIndex">
+            <span class="finger__icon">⊙</span>
+            <span class="finger__name">Index</span>
+          </li>
+          <li class="finger" id="fingerMiddle">
+            <span class="finger__icon">⊙</span>
+            <span class="finger__name">Middle</span>
+          </li>
+          <li class="finger" id="fingerRing">
+            <span class="finger__icon">⊙</span>
+            <span class="finger__name">Ring</span>
+          </li>
+          <li class="finger" id="fingerPinky">
+            <span class="finger__icon">⊙</span>
+            <span class="finger__name">Pinky</span>
+          </li>
+        </ul>
+
+        <div class="lift">
+          <div class="lift__label">
+            <span>Index tip lift</span>
+            <span id="liftValue">0.000</span>
+          </div>
+          <div class="lift__bar">
+            <div id="liftFill" class="lift__fill"></div>
+          </div>
+        </div>
+
+        <div class="events">
+          <div class="events__label">Recent events</div>
+          <ul id="eventLog" class="events__log">
+            <li class="events__empty">No events yet.</li>
+          </ul>
+        </div>
+      </section>
+    </main>
+
+    <script type="module" src="./src/index.js"></script>
+  </body>
+</html>
