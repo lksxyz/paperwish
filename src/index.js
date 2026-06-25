@@ -6,6 +6,7 @@ import {
   FlameSystem,
   BulletSystem,
   EnemySystem,
+  HitRingSystem,
   resizeCanvasToElement,
   clearCanvas,
   normalizedToDisplay,
@@ -13,12 +14,14 @@ import {
 
 const MAX_LIVES = 5;
 const DIFFICULTY_PERIOD_MS = 60_000;
-const BASE_SPAWN_INTERVAL = 2.4;
+const BASE_SPAWN_INTERVAL = 2.0;
 const SPAWN_ACCEL = 0.88;
-const BASE_ENEMY_SPEED = 80;
-const SPEED_PER_LEVEL = 18;
-const BASE_ENEMY_SIZE = 28;
-const SIZE_PER_LEVEL = 2;
+const BASE_ENEMY_SPEED = 140;
+const SPEED_PER_LEVEL = 24;
+const BASE_ENEMY_SIZE = 44;
+const SIZE_PER_LEVEL = 3;
+
+const FPS_SAMPLE_MS = 250;
 
 const els = {
   video: document.getElementById("webcam"),
@@ -26,6 +29,7 @@ const els = {
   placeholder: document.getElementById("placeholder"),
   status: document.getElementById("status"),
   latency: document.getElementById("latency"),
+  fps: document.getElementById("fps"),
   startWebcam: document.getElementById("startWebcam"),
   stopWebcam: document.getElementById("stopWebcam"),
   soundToggle: document.getElementById("soundToggle"),
@@ -38,7 +42,6 @@ const els = {
   fingerPinky: document.getElementById("fingerPinky"),
   liftFill: document.getElementById("liftFill"),
   liftValue: document.getElementById("liftValue"),
-  eventLog: document.getElementById("eventLog"),
   gameScore: document.getElementById("gameScore"),
   gameLives: document.getElementById("gameLives"),
   gameDifficulty: document.getElementById("gameDifficulty"),
@@ -52,6 +55,7 @@ const stateMachine = new GestureStateMachine(sound);
 const flames = new FlameSystem();
 const bullets = new BulletSystem();
 const enemies = new EnemySystem();
+const hitRings = new HitRingSystem();
 
 const state = {
   detector: null,
@@ -60,7 +64,6 @@ const state = {
   videoFrameId: null,
   rafId: null,
   lastVideoTime: -1,
-  lastEventsRef: null,
 };
 
 const game = {
@@ -72,6 +75,12 @@ const game = {
   difficultyTimer: 0,
   lastFrameMs: 0,
   startedAt: 0,
+};
+
+const fps = {
+  frames: 0,
+  lastSampleAt: performance.now(),
+  value: 0,
 };
 
 setStatus("Loading model…", "loading");
@@ -145,6 +154,7 @@ function stopAll() {
   flames.clear();
   bullets.clear();
   enemies.clear();
+  hitRings.clear();
   els.placeholder.classList.add("is-visible");
   state.mode = "idle";
   state.lastVideoTime = -1;
@@ -161,6 +171,7 @@ function resetGame() {
   game.lastFrameMs = 0;
   game.startedAt = performance.now();
   enemies.clear();
+  hitRings.clear();
   updateGameUI();
   hideGameOver();
 }
@@ -186,6 +197,13 @@ function getSourceSize() {
     };
   }
   return { width: 0, height: 0 };
+}
+
+function getDisplaySize() {
+  return {
+    width: window.innerWidth,
+    height: window.innerHeight,
+  };
 }
 
 function detectOnVideo() {
@@ -221,7 +239,7 @@ function stepGame(dt, displaySize) {
   game.spawnTimer += dt;
   if (game.spawnTimer >= currentSpawnInterval()) {
     game.spawnTimer -= currentSpawnInterval();
-    const margin = 30;
+    const margin = 50;
     const y = margin + Math.random() * (displaySize.height - margin * 2);
     enemies.spawn(y, currentEnemySize(), currentEnemySpeed());
   }
@@ -243,8 +261,9 @@ function stepGame(dt, displaySize) {
 function checkBulletHits() {
   for (let i = bullets.bullets.length - 1; i >= 0; i--) {
     const b = bullets.bullets[i];
-    const hit = enemies.hitBy(b, 3);
+    const hit = enemies.hitBy(b);
     if (hit) {
+      hitRings.emit(hit.displayX, hit.displayY, "#fde047");
       bullets.bullets.splice(i, 1);
       game.score++;
       sound?.playRecoil();
@@ -253,16 +272,25 @@ function checkBulletHits() {
   }
 }
 
+function updateFps(timestamp) {
+  fps.frames += 1;
+  const elapsed = timestamp - fps.lastSampleAt;
+  if (elapsed >= FPS_SAMPLE_MS) {
+    fps.value = (fps.frames * 1000) / elapsed;
+    fps.frames = 0;
+    fps.lastSampleAt = timestamp;
+    els.fps.textContent = `${fps.value.toFixed(0)} fps`;
+  }
+}
+
 function renderAndUpdate(landmarks, timestamp) {
   resizeCanvasToElement(els.canvas, els.canvas.parentElement);
   const sourceSize = getSourceSize();
-  const displaySize = {
-    width: els.canvas.clientWidth,
-    height: els.canvas.clientHeight,
-  };
+  const displaySize = getDisplaySize();
 
   const dt = game.lastFrameMs ? Math.min(0.1, (timestamp - game.lastFrameMs) / 1000) : 0;
   game.lastFrameMs = timestamp;
+  updateFps(timestamp);
 
   clearCanvas(els.canvas);
 
@@ -284,10 +312,13 @@ function renderAndUpdate(landmarks, timestamp) {
 
   flames.update();
   bullets.update(displaySize);
+  enemies.update(dt);
+  hitRings.update();
   const ctx = els.canvas.getContext("2d");
   flames.draw(ctx);
   enemies.draw(ctx);
   bullets.draw(ctx);
+  hitRings.draw(ctx);
 
   updateGestureUI(status);
   els.latency.textContent = "live";
@@ -306,8 +337,6 @@ function updateGestureUI(status) {
     badge.classList.add("state-badge--idle");
     badge.textContent = "IDLE";
   }
-
-  els.gestureScore.textContent = (status.score || 0).toFixed(2);
 
   const fingerEls = {
     thumb: els.fingerThumb,
@@ -328,8 +357,6 @@ function updateGestureUI(status) {
   const liftPct = Math.min(100, (lift / 0.12) * 100);
   els.liftFill.style.width = `${liftPct.toFixed(1)}%`;
   els.liftValue.textContent = lift.toFixed(3);
-
-  renderEventLog(status.events);
 }
 
 function updateGameUI() {
@@ -350,31 +377,9 @@ function hideGameOver() {
   els.gameOver.hidden = true;
 }
 
-function renderEventLog(events) {
-  if (!events || !events.length) {
-    els.eventLog.innerHTML = '<li class="events__empty">No events yet.</li>';
-    return;
-  }
-  els.eventLog.innerHTML = events
-    .map((e) => {
-      const time = new Date(e.timestamp).toLocaleTimeString();
-      const cls = `events__item events__item--${e.type}`;
-      const label =
-        e.type === "fold" || e.type === "pistol_enter"
-          ? "cock"
-          : e.type === "recoil"
-            ? "recoil"
-            : e.type === "pistol_exit"
-              ? "exit"
-              : e.type;
-      return `<li class="${cls}"><span class="events__time">${time}</span><span class="events__type">${label}</span></li>`;
-    })
-    .join("");
-}
-
 function setStatus(text, kind) {
   els.status.textContent = text;
-  els.status.className = `hud__pill hud__pill--${kind}`;
+  els.status.className = `pill pill--${kind}`;
 }
 
 function restartGame() {
@@ -398,9 +403,9 @@ window.addEventListener("beforeunload", () => {
   flames.clear();
   bullets.clear();
   enemies.clear();
+  hitRings.clear();
 });
 
 window.addEventListener("resize", () => {
-  if (state.mode === "idle") return;
   resizeCanvasToElement(els.canvas, els.canvas.parentElement);
 });

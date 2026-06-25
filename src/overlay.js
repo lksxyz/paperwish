@@ -172,9 +172,9 @@ export class FlameSystem {
   }
 }
 
-const BULLET_SPEED = 22;
-const BULLET_TRAIL_LEN = 1;
-const BULLET_MARGIN = 40;
+const BULLET_SPEED = 26;
+const BULLET_TRAIL_LEN = 4;
+const BULLET_MARGIN = 60;
 
 export class BulletSystem {
   constructor() {
@@ -211,13 +211,16 @@ export class BulletSystem {
     for (const b of this.bullets) {
       ctx.save();
       ctx.lineCap = "round";
-      ctx.lineWidth = 2;
+      ctx.lineWidth = 3;
       ctx.strokeStyle = "#fde047";
       ctx.shadowColor = "#fbbf24";
-      ctx.shadowBlur = 10;
+      ctx.shadowBlur = 14;
       ctx.beginPath();
       if (b.trail.length > 0) {
         ctx.moveTo(b.trail[0].x, b.trail[0].y);
+        for (let i = 1; i < b.trail.length; i++) {
+          ctx.lineTo(b.trail[i].x, b.trail[i].y);
+        }
         ctx.lineTo(b.x, b.y);
       }
       ctx.stroke();
@@ -226,9 +229,9 @@ export class BulletSystem {
       ctx.save();
       ctx.fillStyle = "#fff7ed";
       ctx.shadowColor = "#fde047";
-      ctx.shadowBlur = 10;
+      ctx.shadowBlur = 12;
       ctx.beginPath();
-      ctx.arc(b.x, b.y, 2.2, 0, Math.PI * 2);
+      ctx.arc(b.x, b.y, 3, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
     }
@@ -239,7 +242,9 @@ export class BulletSystem {
   }
 }
 
-const HIT_PADDING = 15;
+const HIT_PADDING = 32;
+const BULLET_HIT_RADIUS = 10;
+const ENEMY_LERP = 0.35;
 
 export class EnemySystem {
   constructor() {
@@ -252,19 +257,27 @@ export class EnemySystem {
       y,
       vx: speed,
       size,
+      displayX: -size,
+      displayY: y,
+      wobble: Math.random() * Math.PI * 2,
     });
   }
 
   update(dt) {
     for (const e of this.enemies) {
       e.x += e.vx * dt;
+      e.wobble += dt * 2.4;
+      // Smooth visual position toward logical position (ease-out glide)
+      e.displayX += (e.x - e.displayX) * ENEMY_LERP;
+      const targetY = e.y + Math.sin(e.wobble) * 4;
+      e.displayY += (targetY - e.displayY) * ENEMY_LERP;
     }
   }
 
   reachedSide(displayWidth) {
     const passed = [];
     this.enemies = this.enemies.filter((e) => {
-      if (e.x > displayWidth) {
+      if (e.displayX - e.size > displayWidth) {
         passed.push(e);
         return false;
       }
@@ -273,14 +286,15 @@ export class EnemySystem {
     return passed;
   }
 
-  hitBy(bullet, radius = 3) {
+  hitBy(bullet, radius = BULLET_HIT_RADIUS) {
     for (let i = 0; i < this.enemies.length; i++) {
       const e = this.enemies[i];
-      const dx = bullet.x - e.x;
-      const dy = bullet.y - e.y;
+      const dx = bullet.x - e.displayX;
+      const dy = bullet.y - e.displayY;
       if (Math.hypot(dx, dy) < e.size / 2 + radius + HIT_PADDING) {
+        const killed = e;
         this.enemies.splice(i, 1);
-        return e;
+        return killed;
       }
     }
     return null;
@@ -289,10 +303,10 @@ export class EnemySystem {
   draw(ctx) {
     for (const e of this.enemies) {
       ctx.save();
-      ctx.translate(e.x, e.y);
+      ctx.translate(e.displayX, e.displayY);
       ctx.fillStyle = "#ef4444";
       ctx.shadowColor = "#dc2626";
-      ctx.shadowBlur = 12;
+      ctx.shadowBlur = 16;
 
       ctx.beginPath();
       ctx.moveTo(e.size / 2, 0);
@@ -313,5 +327,42 @@ export class EnemySystem {
 
   clear() {
     this.enemies.length = 0;
+  }
+}
+
+export class HitRingSystem {
+  constructor() {
+    this.rings = [];
+  }
+
+  emit(x, y, color = "#fde047") {
+    this.rings.push({ x, y, radius: 8, maxRadius: 56, life: 1.0, color });
+  }
+
+  update() {
+    this.rings = this.rings.filter((r) => {
+      r.life -= 0.05;
+      r.radius += (r.maxRadius - r.radius) * 0.25;
+      return r.life > 0;
+    });
+  }
+
+  draw(ctx) {
+    for (const r of this.rings) {
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, r.life);
+      ctx.strokeStyle = r.color;
+      ctx.lineWidth = 3;
+      ctx.shadowColor = r.color;
+      ctx.shadowBlur = 18;
+      ctx.beginPath();
+      ctx.arc(r.x, r.y, r.radius, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+
+  clear() {
+    this.rings.length = 0;
   }
 }
