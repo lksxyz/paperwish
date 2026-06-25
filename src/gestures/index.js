@@ -47,8 +47,7 @@ export class GestureStateMachine {
     if (this.lastFingers && fingers) {
       const ringFolded = this.lastFingers.ring && !fingers.ring;
       const pinkyFolded = this.lastFingers.pinky && !fingers.pinky;
-      const requiredExtended = fingers.thumb && fingers.index;
-      if (ringFolded && pinkyFolded && requiredExtended) {
+      if (ringFolded && pinkyFolded && fingers.index) {
         this.sound?.playCock(timestamp);
         this._emit({ type: "fold", timestamp });
       }

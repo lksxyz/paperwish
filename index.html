@@ -7,88 +7,39 @@
     <link rel="stylesheet" href="./src/style.css" />
   </head>
   <body>
-    <main class="stage" aria-label="Detection stage">
-      <video
-        id="webcam"
-        class="stage__video"
-        autoplay
-        playsinline
-        muted
-        hidden
-      ></video>
-      <canvas id="overlay" class="stage__overlay"></canvas>
-      <div id="placeholder" class="stage__placeholder">
-        <div class="placeholder">
-          <div class="placeholder__brand">
-            <span class="placeholder__mark" aria-hidden="true"></span>
-            <span class="placeholder__brand-name">Tembak Tembak Dor Dor Dor</span>
-          </div>
-
-          <svg
-            class="placeholder__art"
-            viewBox="0 0 96 96"
-            role="img"
-            aria-label="Pistol hand gesture"
-          >
-            <g
-              fill="none"
-              stroke="currentColor"
-              stroke-width="3"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <path d="M30 70 Q22 50 30 30" />
-              <path d="M30 70 L48 78" />
-              <path d="M30 40 Q40 32 50 30" />
-              <path d="M30 30 Q42 22 56 24" />
-              <path d="M30 22 Q44 14 58 18" />
-              <path d="M30 14 Q46 8 60 14" />
-              <circle cx="60" cy="14" r="3" fill="currentColor" />
-              <path d="M70 14 L88 14" stroke-dasharray="2 4" opacity="0.6" />
-            </g>
-          </svg>
-
-          <p class="placeholder__lead">Show your hand to the camera</p>
-
-          <ol class="placeholder__steps">
-            <li>
-              <span class="placeholder__step-num">1</span>
-              <span class="placeholder__step-body">
-                <strong>Pistol</strong>: thumb and index up, others folded
-              </span>
-            </li>
-            <li>
-              <span class="placeholder__step-num">2</span>
-              <span class="placeholder__step-body">
-                <strong>Cock</strong>: fold ring and pinky to the palm
-              </span>
-            </li>
-            <li>
-              <span class="placeholder__step-num">3</span>
-              <span class="placeholder__step-body">
-                <strong>Fire</strong>: fold the thumb to shoot
-              </span>
-            </li>
-          </ol>
-
-          <p class="placeholder__cta">Tap <kbd>Start</kbd> to begin</p>
-        </div>
-      </div>
-
-      <header class="hud hud--top">
-        <div class="hud__cluster">
-          <div class="brand">
-            <span class="brand__mark" aria-hidden="true"></span>
-            <span class="brand__name">Tembak Tembak Dor Dor Dor</span>
-          </div>
-          <div class="hud__pills">
-            <span id="status" class="pill pill--idle">Idle</span>
-            <span id="latency" class="pill pill--dim">—</span>
-            <span id="fps" class="pill pill--dim" title="Frames per second">0 fps</span>
+    <main class="layout">
+      <main class="stage" aria-label="Game stage">
+        <video
+          id="webcam"
+          class="stage__video"
+          autoplay
+          playsinline
+          muted
+        ></video>
+        <canvas id="gameCanvas" class="stage__canvas"></canvas>
+        <div id="gameOver" class="game-over" hidden>
+          <div class="game-over__panel">
+            <span class="game-over__eyebrow">Run ended</span>
+            <h2 class="game-over__title">Defeated</h2>
+            <p class="game-over__subtitle">The enemy broke through.</p>
+            <div class="game-over__score">
+              <span>Final score</span>
+              <strong id="finalScore">0</strong>
+            </div>
+            <button id="restartBtn" class="btn btn--primary" type="button">
+              Play again
+            </button>
           </div>
         </div>
+      </main>
 
-        <div class="hud__cluster hud__cluster--stats">
+      <aside class="panel panel--right">
+        <header class="panel__head">
+          <span class="brand__mark" aria-hidden="true"></span>
+          <span class="panel__title">Tembak Tembak Dor Dor Dor</span>
+        </header>
+
+        <div class="panel__section">
           <div class="stat">
             <span class="stat__label">Score</span>
             <span id="gameScore" class="stat__value">0</span>
@@ -101,6 +52,11 @@
               <span class="life"></span>
               <span class="life"></span>
               <span class="life"></span>
+              <span class="life"></span>
+              <span class="life"></span>
+              <span class="life"></span>
+              <span class="life"></span>
+              <span class="life"></span>
             </span>
           </div>
           <div class="stat">
@@ -108,11 +64,17 @@
             <span id="gameDifficulty" class="stat__value">1</span>
           </div>
         </div>
-      </header>
 
-      <footer class="hud hud--bottom">
-        <div class="hud__cluster hud__cluster--gesture">
-          <span id="stateBadge" class="state-badge state-badge--idle">IDLE</span>
+        <div class="panel__section">
+          <div class="panel__row">
+            <span id="stateBadge" class="state-badge state-badge--idle">IDLE</span>
+            <div class="lift" aria-label="Index trigger">
+              <div class="lift__bar">
+                <div id="liftFill" class="lift__fill"></div>
+              </div>
+              <span id="liftValue" class="lift__value">0.000</span>
+            </div>
+          </div>
           <ul class="fingers" aria-label="Finger states">
             <li class="finger" id="fingerThumb">
               <span class="finger__icon">⊙</span>
@@ -135,15 +97,15 @@
               <span class="finger__name">P</span>
             </li>
           </ul>
-          <div class="lift" aria-label="Index tip lift">
-            <div class="lift__bar">
-              <div id="liftFill" class="lift__fill"></div>
-            </div>
-            <span id="liftValue" class="lift__value">0.000</span>
-          </div>
         </div>
 
-        <div class="hud__cluster hud__cluster--controls">
+        <div class="panel__section panel__pills">
+          <span id="status" class="pill pill--idle">Idle</span>
+          <span id="latency" class="pill pill--dim">—</span>
+          <span id="fps" class="pill pill--dim" title="Frames per second">0 fps</span>
+        </div>
+
+        <div class="panel__section panel__controls">
           <button id="startWebcam" class="btn btn--primary" type="button">
             Start
           </button>
@@ -155,22 +117,7 @@
             <span>SFX</span>
           </label>
         </div>
-      </footer>
-
-      <div id="gameOver" class="game-over" hidden>
-        <div class="game-over__panel">
-          <span class="game-over__eyebrow">Run ended</span>
-          <h2 class="game-over__title">Defeated</h2>
-          <p class="game-over__subtitle">The enemy broke through.</p>
-          <div class="game-over__score">
-            <span>Final score</span>
-            <strong id="finalScore">0</strong>
-          </div>
-          <button id="restartBtn" class="btn btn--primary" type="button">
-            Play again
-          </button>
-        </div>
-      </div>
+      </aside>
     </main>
 
     <script type="module" src="./src/index.js"></script>

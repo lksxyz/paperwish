@@ -7,17 +7,17 @@ import {
   BulletSystem,
   EnemySystem,
   HitRingSystem,
+  CannonSystem,
   resizeCanvasToElement,
   clearCanvas,
-  normalizedToDisplay,
 } from "./overlay.js";
 
-const MAX_LIVES = 5;
-const DIFFICULTY_PERIOD_MS = 60_000;
-const BASE_SPAWN_INTERVAL = 2.0;
-const SPAWN_ACCEL = 0.88;
-const BASE_ENEMY_SPEED = 140;
-const SPEED_PER_LEVEL = 24;
+const MAX_LIVES = 10;
+const DIFFICULTY_PERIOD_MS = 80_000;
+const BASE_SPAWN_INTERVAL = 2.6;
+const SPAWN_ACCEL = 0.92;
+const BASE_ENEMY_SPEED = 90;
+const SPEED_PER_LEVEL = 16;
 const BASE_ENEMY_SIZE = 44;
 const SIZE_PER_LEVEL = 3;
 
@@ -25,8 +25,7 @@ const FPS_SAMPLE_MS = 250;
 
 const els = {
   video: document.getElementById("webcam"),
-  canvas: document.getElementById("overlay"),
-  placeholder: document.getElementById("placeholder"),
+  gameCanvas: document.getElementById("gameCanvas"),
   status: document.getElementById("status"),
   latency: document.getElementById("latency"),
   fps: document.getElementById("fps"),
@@ -34,7 +33,6 @@ const els = {
   stopWebcam: document.getElementById("stopWebcam"),
   soundToggle: document.getElementById("soundToggle"),
   stateBadge: document.getElementById("stateBadge"),
-  gestureScore: document.getElementById("gestureScore"),
   fingerThumb: document.getElementById("fingerThumb"),
   fingerIndex: document.getElementById("fingerIndex"),
   fingerMiddle: document.getElementById("fingerMiddle"),
@@ -56,6 +54,7 @@ const flames = new FlameSystem();
 const bullets = new BulletSystem();
 const enemies = new EnemySystem();
 const hitRings = new HitRingSystem();
+const cannon = new CannonSystem();
 
 const state = {
   detector: null,
@@ -111,10 +110,11 @@ async function startWebcam() {
     state.stream = stream;
     els.video.srcObject = stream;
     els.video.hidden = false;
-    els.placeholder.classList.remove("is-visible");
     await els.video.play();
 
     state.mode = "webcam";
+    resizeCanvasToElement(els.gameCanvas, els.gameCanvas.parentElement);
+    cannon.snapTo(els.gameCanvas.clientWidth / 2, els.gameCanvas.clientHeight - 50);
     state.lastVideoTime = -1;
     els.startWebcam.disabled = true;
     els.stopWebcam.disabled = false;
@@ -150,12 +150,12 @@ function stopAll() {
   els.video.hidden = true;
   els.startWebcam.disabled = false;
   els.stopWebcam.disabled = true;
-  clearCanvas(els.canvas);
+  clearCanvas(els.gameCanvas);
   flames.clear();
   bullets.clear();
   enemies.clear();
   hitRings.clear();
-  els.placeholder.classList.add("is-visible");
+  cannon.reset();
   state.mode = "idle";
   state.lastVideoTime = -1;
   hideGameOver();
@@ -201,8 +201,8 @@ function getSourceSize() {
 
 function getDisplaySize() {
   return {
-    width: window.innerWidth,
-    height: window.innerHeight,
+    width: els.gameCanvas.clientWidth,
+    height: els.gameCanvas.clientHeight,
   };
 }
 
@@ -240,13 +240,13 @@ function stepGame(dt, displaySize) {
   if (game.spawnTimer >= currentSpawnInterval()) {
     game.spawnTimer -= currentSpawnInterval();
     const margin = 50;
-    const y = margin + Math.random() * (displaySize.height - margin * 2);
-    enemies.spawn(y, currentEnemySize(), currentEnemySpeed());
+    const x = margin + Math.random() * (displaySize.width - margin * 2);
+    enemies.spawn(x, currentEnemySize(), currentEnemySpeed());
   }
 
   enemies.update(dt);
 
-  const passed = enemies.reachedSide(displaySize.width);
+  const passed = enemies.reachedBottom(displaySize.height);
   if (passed.length > 0) {
     game.lives -= passed.length;
     if (game.lives <= 0) {
@@ -284,41 +284,74 @@ function updateFps(timestamp) {
 }
 
 function renderAndUpdate(landmarks, timestamp) {
-  resizeCanvasToElement(els.canvas, els.canvas.parentElement);
+  resizeCanvasToElement(els.gameCanvas, els.gameCanvas.parentElement);
+
   const sourceSize = getSourceSize();
-  const displaySize = getDisplaySize();
+  const gameSize = getDisplaySize();
 
   const dt = game.lastFrameMs ? Math.min(0.1, (timestamp - game.lastFrameMs) / 1000) : 0;
   game.lastFrameMs = timestamp;
   updateFps(timestamp);
 
-  clearCanvas(els.canvas);
+  clearCanvas(els.gameCanvas);
 
   const status = stateMachine.update(landmarks, timestamp);
 
+  // Cannon x slides left/right based on the wrist position.
+  // Game canvas IS mirrored (scaleX(-1)), so wrist.x maps directly to cannon x
+  // (the user sees the cannon mirror to match the hand position).
+  if (landmarks && landmarks.length >= 1) {
+    const wristX = landmarks[0].x;
+    const margin = 70;
+    const targetX = Math.max(
+      margin,
+      Math.min(wristX * gameSize.width, gameSize.width - margin),
+    );
+    cannon.setTargetX(targetX);
+  }
+  // Cannon y is locked at the very bottom of the stage
+  cannon.setY(gameSize.height - 50);
+
+  if (landmarks && landmarks.length >= 9) {
+    const tip = landmarks[8];
+    const mcp = landmarks[5];
+    const dx = tip.x - mcp.x;
+    const dy = tip.y - mcp.y;
+    const mag = Math.hypot(dx, dy);
+    if (mag > 0.015) {
+      // Game canvas is mirrored, so the raw camera angle is what we want.
+      cannon.setTargetAngle(Math.atan2(dy, dx));
+    }
+  }
+  const cannonActive = status.state === "pistol" || status.state === "firing";
+  cannon.setIntensityTarget(cannonActive ? 1 : 0.2);
+  cannon.update();
+
+  // Draw hand skeleton on the game canvas (overlaid on the video background)
   if (landmarks && status.fingers) {
-    drawHandSkeleton(els.canvas, landmarks, status.fingers, sourceSize, displaySize);
+    drawHandSkeleton(els.gameCanvas, landmarks, status.fingers, sourceSize, gameSize);
   }
 
   if (status.newRecoil) {
-    const r = status.newRecoil;
-    const disp = normalizedToDisplay(r.x, r.y, sourceSize, displaySize);
-    flames.emit(disp.x, disp.y, r.angle);
-    bullets.emit(disp.x, disp.y, r.angle);
+    cannon.fire();
+    const tip = cannon.getTipPosition();
+    flames.emit(tip.x, tip.y, cannon.getAngle());
+    bullets.emit(tip.x, tip.y, cannon.getAngle());
   }
 
-  stepGame(dt, displaySize);
+  stepGame(dt, gameSize);
   checkBulletHits();
 
   flames.update();
-  bullets.update(displaySize);
+  bullets.update(gameSize);
   enemies.update(dt);
   hitRings.update();
-  const ctx = els.canvas.getContext("2d");
+  const ctx = els.gameCanvas.getContext("2d");
   flames.draw(ctx);
   enemies.draw(ctx);
   bullets.draw(ctx);
   hitRings.draw(ctx);
+  cannon.draw(ctx, cannonActive);
 
   updateGestureUI(status);
   els.latency.textContent = "live";
@@ -329,7 +362,7 @@ function updateGestureUI(status) {
   badge.classList.remove("state-badge--idle", "state-badge--pistol", "state-badge--firing");
   if (status.state === "pistol") {
     badge.classList.add("state-badge--pistol");
-    badge.textContent = "PISTOL";
+    badge.textContent = "AIM";
   } else if (status.state === "firing") {
     badge.classList.add("state-badge--firing");
     badge.textContent = "FIRING";
@@ -407,5 +440,5 @@ window.addEventListener("beforeunload", () => {
 });
 
 window.addEventListener("resize", () => {
-  resizeCanvasToElement(els.canvas, els.canvas.parentElement);
+  resizeCanvasToElement(els.gameCanvas, els.gameCanvas.parentElement);
 });

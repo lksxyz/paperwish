@@ -172,9 +172,10 @@ export class FlameSystem {
   }
 }
 
-const BULLET_SPEED = 26;
-const BULLET_TRAIL_LEN = 4;
-const BULLET_MARGIN = 60;
+const BULLET_SPEED = 28;
+const BULLET_TRAIL_LEN = 22;
+const BULLET_MARGIN = 80;
+const BULLET_GRAVITY = 0.18;
 
 export class BulletSystem {
   constructor() {
@@ -196,6 +197,7 @@ export class BulletSystem {
       b.trail.push({ x: b.x, y: b.y });
       if (b.trail.length > BULLET_TRAIL_LEN) b.trail.shift();
       b.x += b.vx;
+      b.vy += BULLET_GRAVITY;
       b.y += b.vy;
     }
     this.bullets = this.bullets.filter(
@@ -209,29 +211,36 @@ export class BulletSystem {
 
   draw(ctx) {
     for (const b of this.bullets) {
-      ctx.save();
-      ctx.lineCap = "round";
-      ctx.lineWidth = 3;
-      ctx.strokeStyle = "#fde047";
-      ctx.shadowColor = "#fbbf24";
-      ctx.shadowBlur = 14;
-      ctx.beginPath();
-      if (b.trail.length > 0) {
-        ctx.moveTo(b.trail[0].x, b.trail[0].y);
-        for (let i = 1; i < b.trail.length; i++) {
-          ctx.lineTo(b.trail[i].x, b.trail[i].y);
+      const points = b.trail.length > 0 ? b.trail : [{ x: b.x, y: b.y }];
+      const all = points.concat([{ x: b.x, y: b.y }]);
+
+      if (all.length > 1) {
+        ctx.save();
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        ctx.shadowColor = "#fbbf24";
+        ctx.shadowBlur = 14;
+
+        for (let i = 1; i < all.length; i++) {
+          const t = i / (all.length - 1);
+          ctx.globalAlpha = 0.18 + 0.82 * t;
+          ctx.strokeStyle = "#fde047";
+          ctx.lineWidth = 1.2 + 2.6 * t;
+          ctx.beginPath();
+          ctx.moveTo(all[i - 1].x, all[i - 1].y);
+          ctx.lineTo(all[i].x, all[i].y);
+          ctx.stroke();
         }
-        ctx.lineTo(b.x, b.y);
+
+        ctx.restore();
       }
-      ctx.stroke();
-      ctx.restore();
 
       ctx.save();
       ctx.fillStyle = "#fff7ed";
       ctx.shadowColor = "#fde047";
-      ctx.shadowBlur = 12;
+      ctx.shadowBlur = 18;
       ctx.beginPath();
-      ctx.arc(b.x, b.y, 3, 0, Math.PI * 2);
+      ctx.arc(b.x, b.y, 3.8, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
     }
@@ -251,33 +260,32 @@ export class EnemySystem {
     this.enemies = [];
   }
 
-  spawn(y, size, speed) {
+  spawn(x, size, speed) {
     this.enemies.push({
-      x: -size,
-      y,
-      vx: speed,
+      x,
+      y: -size,
+      vy: speed,
       size,
-      displayX: -size,
-      displayY: y,
+      displayX: x,
+      displayY: -size,
       wobble: Math.random() * Math.PI * 2,
     });
   }
 
   update(dt) {
     for (const e of this.enemies) {
-      e.x += e.vx * dt;
+      e.y += e.vy * dt;
       e.wobble += dt * 2.4;
-      // Smooth visual position toward logical position (ease-out glide)
-      e.displayX += (e.x - e.displayX) * ENEMY_LERP;
-      const targetY = e.y + Math.sin(e.wobble) * 4;
-      e.displayY += (targetY - e.displayY) * ENEMY_LERP;
+      const wobbleX = Math.sin(e.wobble) * 6;
+      e.displayX += (e.x + wobbleX - e.displayX) * ENEMY_LERP;
+      e.displayY += (e.y - e.displayY) * ENEMY_LERP;
     }
   }
 
-  reachedSide(displayWidth) {
+  reachedBottom(displayHeight) {
     const passed = [];
     this.enemies = this.enemies.filter((e) => {
-      if (e.displayX - e.size > displayWidth) {
+      if (e.displayY - e.size / 2 > displayHeight) {
         passed.push(e);
         return false;
       }
@@ -304,22 +312,23 @@ export class EnemySystem {
     for (const e of this.enemies) {
       ctx.save();
       ctx.translate(e.displayX, e.displayY);
+
       ctx.fillStyle = "#ef4444";
       ctx.shadowColor = "#dc2626";
       ctx.shadowBlur = 16;
 
       ctx.beginPath();
-      ctx.moveTo(e.size / 2, 0);
-      ctx.lineTo(-e.size / 2, -e.size / 3);
-      ctx.lineTo(-e.size / 4, 0);
-      ctx.lineTo(-e.size / 2, e.size / 3);
+      ctx.moveTo(0, e.size / 2);
+      ctx.lineTo(e.size / 3, -e.size / 2);
+      ctx.lineTo(0, -e.size / 4);
+      ctx.lineTo(-e.size / 3, -e.size / 2);
       ctx.closePath();
       ctx.fill();
 
       ctx.shadowBlur = 0;
       ctx.fillStyle = "#fde047";
       ctx.beginPath();
-      ctx.arc(e.size / 6, 0, e.size / 10, 0, Math.PI * 2);
+      ctx.arc(0, -e.size / 6, e.size / 10, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
     }
@@ -364,5 +373,168 @@ export class HitRingSystem {
 
   clear() {
     this.rings.length = 0;
+  }
+}
+
+const CANNON_BARREL_LEN = 60;
+const CANNON_MUZZLE_LEN = 10;
+const CANNON_TIP_DIST = CANNON_BARREL_LEN + CANNON_MUZZLE_LEN;
+
+export class CannonSystem {
+  constructor() {
+    this.x = 0;
+    this.y = 0;
+    this.targetX = 0;
+    this.targetAngle = 0;
+    this.angle = 0;
+    this.recoil = 0;
+    this.intensity = 0;
+    this.targetIntensity = 0;
+  }
+
+  setPosition(x, y) {
+    this.x = x;
+    this.y = y;
+    this.targetX = x;
+  }
+
+  setTargetX(x) {
+    this.targetX = x;
+  }
+
+  setY(y) {
+    this.y = y;
+  }
+
+  snapTo(x, y) {
+    this.x = x;
+    this.y = y;
+    this.targetX = x;
+  }
+
+  setTargetAngle(angle) {
+    if (Number.isFinite(angle)) this.targetAngle = angle;
+  }
+
+  setIntensityTarget(value) {
+    this.targetIntensity = Math.max(0, Math.min(1, value));
+  }
+
+  fire() {
+    this.recoil = 20;
+  }
+
+  reset() {
+    this.recoil = 0;
+    this.intensity = 0;
+    this.targetIntensity = 0;
+  }
+
+  update() {
+    this.x += (this.targetX - this.x) * 0.2;
+
+    let delta = this.targetAngle - this.angle;
+    while (delta > Math.PI) delta -= 2 * Math.PI;
+    while (delta < -Math.PI) delta += 2 * Math.PI;
+    this.angle += delta * 0.22;
+
+    this.recoil *= 0.82;
+    if (this.recoil < 0.2) this.recoil = 0;
+
+    this.intensity += (this.targetIntensity - this.intensity) * 0.12;
+  }
+
+  getTipPosition() {
+    const tipDist = CANNON_TIP_DIST - this.recoil;
+    return {
+      x: this.x + Math.cos(this.angle) * tipDist,
+      y: this.y + Math.sin(this.angle) * tipDist,
+    };
+  }
+
+  getAngle() {
+    return this.angle;
+  }
+
+  draw(ctx, showAimLine) {
+    const i = this.intensity;
+    const baseAlpha = 0.55 + 0.45 * i;
+    const pulse = 0.88 + 0.12 * Math.sin(performance.now() / 600);
+    const coreGlow = (0.45 + 0.55 * i) * pulse;
+
+    ctx.save();
+    ctx.globalAlpha = baseAlpha;
+    ctx.translate(this.x, this.y);
+    ctx.rotate(this.angle);
+    ctx.translate(-this.recoil, 0);
+
+    ctx.fillStyle = "rgba(0, 0, 0, 0.35)";
+    ctx.beginPath();
+    ctx.ellipse(0, 32, 32, 7, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = "#0b1220";
+    ctx.beginPath();
+    ctx.arc(0, 0, 34, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = "#1e293b";
+    ctx.beginPath();
+    ctx.arc(0, 0, 28, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = `rgba(110, 231, 183, ${0.4 + 0.5 * i})`;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(0, 0, 22, 0, Math.PI * 2);
+    ctx.stroke();
+
+    const coreGradient = ctx.createRadialGradient(0, 0, 2, 0, 0, 20);
+    coreGradient.addColorStop(0, `rgba(167, 243, 208, ${coreGlow})`);
+    coreGradient.addColorStop(0.5, `rgba(110, 231, 183, ${coreGlow * 0.85})`);
+    coreGradient.addColorStop(1, `rgba(14, 116, 144, ${coreGlow * 0.3})`);
+    ctx.fillStyle = coreGradient;
+    ctx.shadowColor = `rgba(110, 231, 183, ${0.6 * coreGlow})`;
+    ctx.shadowBlur = 18;
+    ctx.beginPath();
+    ctx.arc(0, 0, 18, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    ctx.fillStyle = "#334155";
+    ctx.fillRect(0, -10, CANNON_BARREL_LEN, 20);
+
+    ctx.fillStyle = "#475569";
+    ctx.fillRect(0, -10, CANNON_BARREL_LEN, 3);
+
+    ctx.fillStyle = "#0f172a";
+    ctx.fillRect(0, 8, CANNON_BARREL_LEN, 2);
+
+    ctx.fillStyle = `rgba(110, 231, 183, ${0.4 + 0.5 * i})`;
+    ctx.fillRect(6, -6, CANNON_BARREL_LEN - 12, 1.5);
+
+    ctx.fillStyle = "#0b1220";
+    ctx.fillRect(CANNON_BARREL_LEN, -14, CANNON_MUZZLE_LEN, 28);
+
+    ctx.fillStyle = "#1e293b";
+    ctx.fillRect(CANNON_BARREL_LEN + 4, -10, 6, 20);
+
+    ctx.restore();
+
+    if (showAimLine && i > 0.4) {
+      ctx.save();
+      ctx.globalAlpha = baseAlpha;
+      ctx.translate(this.x, this.y);
+      ctx.rotate(this.angle);
+      ctx.strokeStyle = `rgba(110, 231, 183, ${0.32 * i})`;
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([6, 10]);
+      ctx.lineDashOffset = -performance.now() / 50;
+      ctx.beginPath();
+      ctx.moveTo(CANNON_TIP_DIST + 2, 0);
+      ctx.lineTo(900, 0);
+      ctx.stroke();
+      ctx.restore();
+    }
   }
 }

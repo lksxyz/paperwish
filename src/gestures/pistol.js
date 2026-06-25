@@ -11,17 +11,12 @@ export function classifyPistol(landmarks) {
   }
 
   const checks = {
-    thumb: fingers.thumb,
     index: fingers.index,
   };
 
-  const passed = (checks.thumb ? 1 : 0) + (checks.index ? 1 : 0);
-  const total = 2;
-  const score = passed / total;
-
   return {
-    isPistol: passed === total,
-    score,
+    isPistol: fingers.index,
+    score: fingers.index ? 1 : 0,
     fingers,
     checks,
   };

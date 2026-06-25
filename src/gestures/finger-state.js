@@ -20,6 +20,8 @@ function isFingerExtended(landmarks, finger) {
   return extendedDist / foldedDist > 1.45;
 }
 
+export { isFingerExtended };
+
 function isThumbExtended(landmarks) {
   const { tip, ip, ref } = FINGER_LANDMARKS.thumb;
   const tipToRef = dist(landmarks[tip], landmarks[ref]);
