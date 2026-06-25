@@ -126,6 +126,109 @@ body {
   background: var(--panel-2);
 }
 
+.stage__game {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  padding: 10px 14px;
+  border-top: 1px solid var(--border);
+  background: var(--panel-2);
+}
+
+.game__stat {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--mono);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+}
+
+.game__value {
+  color: var(--text);
+  font-size: 14px;
+  min-width: 1.5em;
+  text-align: center;
+}
+
+.game__lives {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.life {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--danger);
+  box-shadow: 0 0 8px rgba(248, 113, 113, 0.5);
+  transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.life.is-lost {
+  background: #2a2f37;
+  box-shadow: none;
+  transform: scale(0.85);
+}
+
+.game-over {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(8, 10, 14, 0.78);
+  backdrop-filter: blur(6px);
+  z-index: 10;
+}
+
+.game-over[hidden] {
+  display: none;
+}
+
+.game-over__panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 28px 32px;
+  text-align: center;
+  display: grid;
+  gap: 12px;
+  min-width: 260px;
+  box-shadow: var(--shadow);
+}
+
+.game-over__title {
+  margin: 0;
+  font-size: 24px;
+  color: var(--danger);
+  letter-spacing: 0.04em;
+}
+
+.game-over__subtitle {
+  margin: 0;
+  color: var(--text-dim);
+  font-size: 13px;
+}
+
+.game-over__score {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.game-over__score strong {
+  color: var(--accent);
+  font-size: 22px;
+  margin-left: 8px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
 .hud__pill {
   font-family: var(--mono);
   font-size: 12px;

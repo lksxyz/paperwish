@@ -5,10 +5,20 @@ import {
   drawHandSkeleton,
   FlameSystem,
   BulletSystem,
+  EnemySystem,
   resizeCanvasToElement,
   clearCanvas,
   normalizedToDisplay,
 } from "./overlay.js";
+
+const MAX_LIVES = 5;
+const DIFFICULTY_PERIOD_MS = 60_000;
+const BASE_SPAWN_INTERVAL = 2.4;
+const SPAWN_ACCEL = 0.88;
+const BASE_ENEMY_SPEED = 80;
+const SPEED_PER_LEVEL = 18;
+const BASE_ENEMY_SIZE = 28;
+const SIZE_PER_LEVEL = 2;
 
 const els = {
   video: document.getElementById("webcam"),
@@ -29,12 +39,19 @@ const els = {
   liftFill: document.getElementById("liftFill"),
   liftValue: document.getElementById("liftValue"),
   eventLog: document.getElementById("eventLog"),
+  gameScore: document.getElementById("gameScore"),
+  gameLives: document.getElementById("gameLives"),
+  gameDifficulty: document.getElementById("gameDifficulty"),
+  gameOver: document.getElementById("gameOver"),
+  finalScore: document.getElementById("finalScore"),
+  restartBtn: document.getElementById("restartBtn"),
 };
 
 const sound = new SoundManager();
 const stateMachine = new GestureStateMachine(sound);
 const flames = new FlameSystem();
 const bullets = new BulletSystem();
+const enemies = new EnemySystem();
 
 const state = {
   detector: null,
@@ -44,6 +61,17 @@ const state = {
   rafId: null,
   lastVideoTime: -1,
   lastEventsRef: null,
+};
+
+const game = {
+  score: 0,
+  lives: MAX_LIVES,
+  difficulty: 1,
+  gameOver: false,
+  spawnTimer: 0,
+  difficultyTimer: 0,
+  lastFrameMs: 0,
+  startedAt: 0,
 };
 
 setStatus("Loading model…", "loading");
@@ -82,6 +110,7 @@ async function startWebcam() {
     els.startWebcam.disabled = true;
     els.stopWebcam.disabled = false;
     setStatus("Running", "ready");
+    resetGame();
     runWebcamLoop();
   } catch (err) {
     console.error(err);
@@ -115,9 +144,25 @@ function stopAll() {
   clearCanvas(els.canvas);
   flames.clear();
   bullets.clear();
+  enemies.clear();
   els.placeholder.classList.add("is-visible");
   state.mode = "idle";
   state.lastVideoTime = -1;
+  hideGameOver();
+}
+
+function resetGame() {
+  game.score = 0;
+  game.lives = MAX_LIVES;
+  game.difficulty = 1;
+  game.gameOver = false;
+  game.spawnTimer = 0;
+  game.difficultyTimer = 0;
+  game.lastFrameMs = 0;
+  game.startedAt = performance.now();
+  enemies.clear();
+  updateGameUI();
+  hideGameOver();
 }
 
 function runWebcamLoop() {
@@ -151,6 +196,63 @@ function detectOnVideo() {
   renderAndUpdate(rightHand, t0);
 }
 
+function currentSpawnInterval() {
+  return BASE_SPAWN_INTERVAL * Math.pow(SPAWN_ACCEL, game.difficulty - 1);
+}
+
+function currentEnemySpeed() {
+  return BASE_ENEMY_SPEED + (game.difficulty - 1) * SPEED_PER_LEVEL;
+}
+
+function currentEnemySize() {
+  return BASE_ENEMY_SIZE + (game.difficulty - 1) * SIZE_PER_LEVEL;
+}
+
+function stepGame(dt, displaySize) {
+  if (game.gameOver) return;
+
+  game.difficultyTimer += dt * 1000;
+  if (game.difficultyTimer >= DIFFICULTY_PERIOD_MS) {
+    game.difficultyTimer -= DIFFICULTY_PERIOD_MS;
+    game.difficulty++;
+    updateGameUI();
+  }
+
+  game.spawnTimer += dt;
+  if (game.spawnTimer >= currentSpawnInterval()) {
+    game.spawnTimer -= currentSpawnInterval();
+    const margin = 30;
+    const y = margin + Math.random() * (displaySize.height - margin * 2);
+    enemies.spawn(y, currentEnemySize(), currentEnemySpeed());
+  }
+
+  enemies.update(dt);
+
+  const passed = enemies.reachedSide(displaySize.width);
+  if (passed.length > 0) {
+    game.lives -= passed.length;
+    if (game.lives <= 0) {
+      game.lives = 0;
+      game.gameOver = true;
+      showGameOver();
+    }
+    updateGameUI();
+  }
+}
+
+function checkBulletHits() {
+  for (let i = bullets.bullets.length - 1; i >= 0; i--) {
+    const b = bullets.bullets[i];
+    const hit = enemies.hitBy(b, 3);
+    if (hit) {
+      bullets.bullets.splice(i, 1);
+      game.score++;
+      sound?.playRecoil();
+      updateGameUI();
+    }
+  }
+}
+
 function renderAndUpdate(landmarks, timestamp) {
   resizeCanvasToElement(els.canvas, els.canvas.parentElement);
   const sourceSize = getSourceSize();
@@ -158,6 +260,9 @@ function renderAndUpdate(landmarks, timestamp) {
     width: els.canvas.clientWidth,
     height: els.canvas.clientHeight,
   };
+
+  const dt = game.lastFrameMs ? Math.min(0.1, (timestamp - game.lastFrameMs) / 1000) : 0;
+  game.lastFrameMs = timestamp;
 
   clearCanvas(els.canvas);
 
@@ -174,10 +279,14 @@ function renderAndUpdate(landmarks, timestamp) {
     bullets.emit(disp.x, disp.y, r.angle);
   }
 
+  stepGame(dt, displaySize);
+  checkBulletHits();
+
   flames.update();
   bullets.update(displaySize);
   const ctx = els.canvas.getContext("2d");
   flames.draw(ctx);
+  enemies.draw(ctx);
   bullets.draw(ctx);
 
   updateGestureUI(status);
@@ -223,6 +332,24 @@ function updateGestureUI(status) {
   renderEventLog(status.events);
 }
 
+function updateGameUI() {
+  els.gameScore.textContent = game.score;
+  els.gameDifficulty.textContent = game.difficulty;
+  const dots = els.gameLives.querySelectorAll(".life");
+  dots.forEach((dot, i) => {
+    dot.classList.toggle("is-lost", i >= game.lives);
+  });
+}
+
+function showGameOver() {
+  els.finalScore.textContent = game.score;
+  els.gameOver.hidden = false;
+}
+
+function hideGameOver() {
+  els.gameOver.hidden = true;
+}
+
 function renderEventLog(events) {
   if (!events || !events.length) {
     els.eventLog.innerHTML = '<li class="events__empty">No events yet.</li>';
@@ -250,9 +377,14 @@ function setStatus(text, kind) {
   els.status.className = `hud__pill hud__pill--${kind}`;
 }
 
+function restartGame() {
+  resetGame();
+}
+
 function hookUpControls() {
   els.startWebcam.addEventListener("click", startWebcam);
   els.stopWebcam.addEventListener("click", stopWebcam);
+  els.restartBtn.addEventListener("click", restartGame);
   els.soundToggle.addEventListener("change", async (e) => {
     const muted = !e.target.checked;
     sound.setMuted(muted);
@@ -265,6 +397,7 @@ window.addEventListener("beforeunload", () => {
   state.detector?.close?.();
   flames.clear();
   bullets.clear();
+  enemies.clear();
 });
 
 window.addEventListener("resize", () => {

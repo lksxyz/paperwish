@@ -1,5 +1,5 @@
 const COOLDOWN_MS = 700;
-const SMOOTH_ALPHA = 0.35;
+const SMOOTH_ALPHA = 0.2;
 
 function isThumbExtended(landmarks) {
   if (!landmarks || landmarks.length < 21) return false;

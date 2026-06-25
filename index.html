@@ -11,9 +11,9 @@
       <header class="app__header">
         <h1>Pistol Hand Sign</h1>
         <p class="app__subtitle">
-          Form a two-finger pistol with your right hand. We'll <strong>cock</strong>
-          when you fold the ring and pinky, and <strong>fire</strong> when you
-          lift the index tip.
+          Form a pistol with thumb and index up, fold the others to cock, then
+          <strong>fold your thumb to fire</strong>. Shoot down the planes before
+          five reach the left.
         </p>
       </header>
 
@@ -38,12 +38,46 @@
           <span id="status" class="hud__pill hud__pill--idle">Idle</span>
           <span id="latency" class="hud__pill">—</span>
         </div>
+
+        <div class="stage__game">
+          <div class="game__stat">
+            <span class="game__label">Score</span>
+            <span id="gameScore" class="game__value">0</span>
+          </div>
+          <div class="game__stat">
+            <span class="game__label">Lives</span>
+            <span id="gameLives" class="game__lives">
+              <span class="life"></span>
+              <span class="life"></span>
+              <span class="life"></span>
+              <span class="life"></span>
+              <span class="life"></span>
+            </span>
+          </div>
+          <div class="game__stat">
+            <span class="game__label">Wave</span>
+            <span id="gameDifficulty" class="game__value">1</span>
+          </div>
+        </div>
+
+        <div id="gameOver" class="game-over" hidden>
+          <div class="game-over__panel">
+            <h2 class="game-over__title">Defeated</h2>
+            <p class="game-over__subtitle">The enemy broke through.</p>
+            <div class="game-over__score">
+              Final score <strong id="finalScore">0</strong>
+            </div>
+            <button id="restartBtn" class="btn btn--primary" type="button">
+              Play again
+            </button>
+          </div>
+        </div>
       </section>
 
       <section class="controls" aria-label="Controls">
         <div class="controls__row">
           <button id="startWebcam" class="btn btn--primary" type="button">
-            Start webcam
+            Start game
           </button>
           <button id="stopWebcam" class="btn" type="button" disabled>
             Stop

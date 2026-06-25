@@ -238,3 +238,80 @@ export class BulletSystem {
     this.bullets.length = 0;
   }
 }
+
+const HIT_PADDING = 15;
+
+export class EnemySystem {
+  constructor() {
+    this.enemies = [];
+  }
+
+  spawn(y, size, speed) {
+    this.enemies.push({
+      x: -size,
+      y,
+      vx: speed,
+      size,
+    });
+  }
+
+  update(dt) {
+    for (const e of this.enemies) {
+      e.x += e.vx * dt;
+    }
+  }
+
+  reachedSide(displayWidth) {
+    const passed = [];
+    this.enemies = this.enemies.filter((e) => {
+      if (e.x > displayWidth) {
+        passed.push(e);
+        return false;
+      }
+      return true;
+    });
+    return passed;
+  }
+
+  hitBy(bullet, radius = 3) {
+    for (let i = 0; i < this.enemies.length; i++) {
+      const e = this.enemies[i];
+      const dx = bullet.x - e.x;
+      const dy = bullet.y - e.y;
+      if (Math.hypot(dx, dy) < e.size / 2 + radius + HIT_PADDING) {
+        this.enemies.splice(i, 1);
+        return e;
+      }
+    }
+    return null;
+  }
+
+  draw(ctx) {
+    for (const e of this.enemies) {
+      ctx.save();
+      ctx.translate(e.x, e.y);
+      ctx.fillStyle = "#ef4444";
+      ctx.shadowColor = "#dc2626";
+      ctx.shadowBlur = 12;
+
+      ctx.beginPath();
+      ctx.moveTo(e.size / 2, 0);
+      ctx.lineTo(-e.size / 2, -e.size / 3);
+      ctx.lineTo(-e.size / 4, 0);
+      ctx.lineTo(-e.size / 2, e.size / 3);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = "#fde047";
+      ctx.beginPath();
+      ctx.arc(e.size / 6, 0, e.size / 10, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  clear() {
+    this.enemies.length = 0;
+  }
+}
